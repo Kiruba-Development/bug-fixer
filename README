@@ -1,6 +1,16 @@
 # 🔍 Multi-Agent Code Review System
 
 An autonomous, AI-powered code review pipeline that analyzes code for bugs, security vulnerabilities, and performance issues. Built with **LangGraph**, **LangChain**, and **Groq LLM**.
+## 💡 Motivation
+Most code review tools (SonarQube, etc.) do static analysis but can't reason about 
+*why* something is a bug or generate context-aware fixes. This system combines 
+static analysis tools with LLM reasoning via a multi-agent pipeline — so each agent 
+specializes in one job and the supervisor routes based on severity.
+
+### Observability (LangSmith)
+Set `LANGCHAIN_API_KEY` and `LANGCHAIN_TRACING_V2=true` in your `.env` to enable 
+full execution tracing via LangSmith.
+
 
 ## ✨ Features
 
