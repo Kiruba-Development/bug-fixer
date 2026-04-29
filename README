@@ -1,0 +1,299 @@
+# 🔍 Multi-Agent Code Review System
+
+An autonomous, AI-powered code review pipeline that analyzes code for bugs, security vulnerabilities, and performance issues. Built with **LangGraph**, **LangChain**, and **Groq LLM**.
+
+## ✨ Features
+
+- **Multi-Agent Architecture**: Specialized agents for code analysis, bug detection, severity classification, and fix generation
+- **Intelligent Routing**: Supervisor agent routes tasks based on code complexity and bug criticality
+- **State Checkpointing**: SQLite-backed persistence for resumable workflows
+- **Multiple Output Formats**: Markdown reports with detailed bug analysis and fix suggestions
+- **Eval Framework**: Built-in evaluation suite to measure bug detection accuracy
+- **CLI & Streamlit UI**: Multiple interfaces for code review
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Code Input (Python/JavaScript/Java)                         │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+                       ▼
+        ┌──────────────────────────────┐
+        │    SUPERVISOR (Router)       │
+        │  - Routes to next agent      │
+        │  - Handles critical reflows  │
+        └──────────────────────────────┘
+         │      │         │         │
+         ▼      ▼         ▼         ▼
+      ┌────┬───────┬──────────┬──────────────┐
+      │    │       │          │              │
+      ▼    ▼       ▼          ▼              ▼
+   [Analysis] [Triage] [Fixes] [Report]
+   
+   Analyzer → Triager → Suggester → Reporter
+```
+
+### Agent Pipeline
+
+| Agent | Responsibility | Tools |
+|-------|---|---|
+| **Supervisor** | Routes tasks, handles conditional logic | State inspection |
+| **Code Analyzer** | Static analysis, AST parsing, complexity metrics | `pylint`, AST parser, complexity checker |
+| **Bug Triager** | Classifies bugs, scores severity, identifies CVEs | Bug classification, severity scoring |
+| **Fix Suggester** | Generates code patches, searches for solutions | Patch generation, web search |
+| **Report Generator** | Formats findings into readable reports | Markdown formatter |
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Python 3.9+
+- Groq API key (free at [console.groq.com](https://console.groq.com))
+
+### Installation
+
+```bash
+# Clone the repository
+git clone <your-repo>
+cd bug-fixer
+
+# Create virtual environment
+python -m venv .venv
+
+# Activate virtual environment (Windows)
+.venv\Scripts\Activate.ps1
+
+# Activate virtual environment (macOS/Linux)
+source .venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### Environment Setup
+
+Create a `.env` file in the project root:
+
+```env
+GROQ_API_KEY=your_groq_api_key_here
+```
+
+## 📖 Usage
+
+### Run Code Review via Python
+
+```python
+from graph import run_review
+
+result = run_review(
+    code="""
+    import sqlite3
+    username = input("Enter username: ")
+    query = f"SELECT * FROM users WHERE name = '{username}'"
+    # SQL injection vulnerability!
+    """,
+    language="python",
+    filename="app.py"
+)
+
+print(result["final_report"])
+```
+
+### CLI Usage
+
+```bash
+# Review code from command line
+python main.py --file path/to/code.py
+
+# Review with custom language
+python main.py --file app.js --language javascript
+```
+
+### Streamlit UI
+
+```bash
+streamlit run ui/app.py
+```
+
+Opens interactive web interface at `http://localhost:8501`
+
+### Run Evaluations
+
+```bash
+# Run evaluation suite against known-buggy code samples
+python evals/run_evals.py
+```
+
+Generates metrics:
+- Bug detection rate
+- Classification accuracy (type + severity)
+- Fix generation success rate
+
+## 📁 Project Structure
+
+```
+bug-fixer/
+├── main.py                 # CLI entry point
+├── graph.py               # LangGraph assembly & orchestration
+├── state.py              # Shared state schema
+├── llm.py                # LLM configuration (Groq)
+├── ollama_llm.py         # Ollama integration (optional)
+│
+├── agents/               # Agent implementations
+│   ├── supervisor.py     # Router logic
+│   ├── code_analyzer.py  # Static analysis
+│   ├── bug_triager.py    # Bug classification
+│   ├── fix_suggester.py  # Patch generation
+│   └── report_generator.py # Report formatting
+│
+├── tools/                # Utility tools
+│   ├── analyzer_tools.py # Code analysis utilities
+│   ├── ast_parser.py     # AST parsing
+│   ├── complexity.py     # Complexity metrics
+│   ├── pylint_tool.py    # Pylint wrapper
+│   ├── triager_tools.py  # Bug classification utilities
+│   ├── suggester_tools.py # Fix generation utilities
+│   └── retry_utils.py    # Retry logic
+│
+├── evals/                # Evaluation framework
+│   └── run_evals.py      # Run evaluations
+│
+├── memory/               # Checkpointing
+│   └── checkpoint.py     # State persistence
+│
+├── requirements.txt      # Dependencies
+├── .env.example         # Environment template
+└── README               # This file
+```
+
+## 🔧 Dependencies
+
+- **langgraph** — Multi-agent orchestration framework
+- **langgraph-checkpoint-sqlite** — State persistence
+- **langchain** — LLM and tool abstractions
+- **langchain-groq** — Groq LLM integration
+- **python-dotenv** — Environment variable management
+
+See [requirements.txt](requirements.txt) for complete list.
+
+## ⚙️ Configuration
+
+### LLM Selection
+
+**Groq (Default - Free)**
+```python
+# Automatically used via .env GROQ_API_KEY
+```
+
+**Ollama (Local)**
+```python
+from ollama_llm import OllamaLLM
+llm = OllamaLLM(model="llama2")
+```
+
+### State Persistence
+
+The system uses SQLite checkpointing. To disable persistence:
+
+```python
+from graph import build_graph
+graph = build_graph(db_path=":memory:")  # In-memory only
+```
+
+## 📊 Evaluation Metrics
+
+The eval suite measures:
+
+1. **Bug Detection Rate** — % of known bugs found
+2. **Classification Accuracy** — Correct bug type & severity
+3. **Fix Generation Success** — % of bugs with valid fixes
+
+Run evaluations:
+```bash
+python evals/run_evals.py
+```
+
+## 🔍 Example Output
+
+**Input Code (with SQL Injection):**
+```python
+username = input("Enter username: ")
+query = f"SELECT * FROM users WHERE name = '{username}'"
+```
+
+**Generated Report:**
+```markdown
+## 🔍 Code Review Report
+
+### 🚨 Critical Issues (1)
+
+**SQL Injection Vulnerability**
+- **Type:** Security
+- **Severity:** CRITICAL
+- **Line:** 2
+- **Description:** User input directly interpolated in SQL query
+- **Fix:** Use parameterized queries
+
+### 📋 Summary
+- Total Bugs: 1
+- Critical: 1 | High: 0 | Medium: 0 | Low: 0
+```
+
+## 🛠️ Development
+
+### Add a New Agent
+
+1. Create agent file in `agents/`
+2. Define agent node function with signature:
+   ```python
+   def my_agent_node(state: CodeReviewState) -> CodeReviewState:
+       # Process state
+       state["field"] = result
+       return state
+   ```
+3. Add to graph in `graph.py`
+4. Update supervisor routing in `agents/supervisor.py`
+
+### Add a New Tool
+
+1. Create tool function in `tools/`
+2. Register with LangChain
+3. Import and use in agent
+
+### Testing
+
+```bash
+# Run evaluation suite
+python evals/run_evals.py
+
+# Run specific eval case
+python -c "from evals.run_evals import EVAL_CASES; print(EVAL_CASES[0])"
+```
+
+## 📝 Notes
+
+- **Checkpointing**: Every agent transition is saved to `checkpoints.db`
+- **Resumable**: If a review is interrupted, you can resume from the last checkpoint
+- **Async Ready**: Graph supports both sync and async execution
+- **Streaming**: Agent responses can be streamed for real-time feedback
+
+## 📄 License
+
+[Add your license here]
+
+## ✉️ Support
+
+For issues or questions, please open a GitHub issue or contact the maintainers.
+python -m bug-fixer.graph
+
+# Evals
+python -m bug-fixer.evals.run_evals
+```
+
+## Resume bullet (fill in your real eval numbers)
+
+> Built an autonomous multi-agent code review system using LangGraph with three specialized agents (static analysis, bug triage, fix suggestion), tool calling (Pylint, AST, Tavily Search), shared memory via LangGraph SqliteSaver checkpointer, and conditional routing with automatic second-pass for critical bugs — achieving **X% bug classification accuracy** on a 10-snippet eval set. Deployed via Streamlit.
+
+## Tech stack
+
+`LangGraph` · `LangChain` · `Azure OpenAI` · `LangSmith` · `Pylint` · `Radon` · `Tavily` · `Streamlit` · `SQLite checkpointing` · `ReAct agents` · `Tool calling`

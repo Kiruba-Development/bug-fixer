@@ -1,0 +1,7 @@
+langgraph
+langgraph-checkpoint-sqlite
+fastapi
+uvicorn
+python-dotenv
+langchain
+langchain-groq
